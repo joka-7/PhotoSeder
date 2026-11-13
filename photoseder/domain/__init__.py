@@ -1,0 +1,1 @@
+"""PhotoSeder domain layer."""

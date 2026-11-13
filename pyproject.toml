@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photoseder"
+version = "1.0.0"
+description = "100% local-first smart photo curation, folder organizer, EXIF tagger and photo album engine"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+dependencies = [
+    "opencv-python-headless>=4.8,<5",
+    "numpy>=1.26",
+    "Pillow>=10.0",
+    "piexif>=1.1.3",
+    "streamlit>=1.67",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+heic = ["pillow-heif>=0.16"]
+
+[tool.setuptools.packages.find]
+include = ["photoseder*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]

@@ -1,0 +1,11 @@
+# PhotoSeder is local-first: no telemetry, and the server only listens on this machine.
+[browser]
+gatherUsageStats = false
+
+[server]
+address = "localhost"
+headless = false
+maxUploadSize = 1
+
+[theme]
+primaryColor = "#2f6f5e"
