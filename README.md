@@ -50,6 +50,28 @@ Run the tests with:
 pytest
 ```
 
+## Windows desktop app
+
+PhotoSeder can run as a normal Windows program with its own window and a **Browse...** button for
+choosing the photo folder, no terminal needed.
+
+**Get it:** open the repository's *Actions* tab, choose **Windows desktop build**, press
+**Run workflow**, then download the `PhotoSeder-windows` artifact from the finished run (pushing a
+tag such as `v1.0.0` also attaches the zip to a GitHub release). Unzip it anywhere and double-click
+`PhotoSeder.exe`.
+
+- The first start takes several seconds, and the folder is a few hundred MB.
+- The program is not code-signed, so Windows SmartScreen may say "Windows protected your PC":
+  press **More info**, then **Run anyway**.
+- The window uses the Edge WebView2 runtime (included with Windows 11 and updated Windows 10). If
+  it is missing, PhotoSeder opens in your default browser instead and shows a small window with a
+  **Quit** button.
+- If it does not start, the server's log is `%LOCALAPPDATA%\PhotoSeder\server.log`.
+
+**From source:** after `pip install -e ".[desktop]"`, `python -m photoseder` opens the same window,
+and `python -m photoseder --smoke-test` checks the engine and server. To build the executable
+yourself, run `pyinstaller packaging/photoseder.spec --noconfirm` (Windows builds only on Windows).
+
 ## What it does
 
 | Tab | Function |
