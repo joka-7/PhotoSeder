@@ -9,3 +9,4 @@ dist/
 .photoseder_state.json
 .photoseder_journal.json
 .photoseder_cache/
+packaging/photoseder.ico

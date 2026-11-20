@@ -22,12 +22,12 @@ import sys
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:  # Allows running without `pip install -e .`
     sys.path.insert(0, str(_REPO_ROOT))
 
+from photoseder import desktop  # noqa: E402
 from photoseder.domain.enums import (  # noqa: E402
     FileActionMode,
     LayoutTemplate,
@@ -144,23 +144,30 @@ def relative(path: str, root: Path) -> str:
 # ------------------------------------------------------------------- sidebar
 
 
-def open_folder(folder_text: str) -> None:
-    """Open a folder, load its cache and analyze new or changed photos."""
+def open_folder(folder_text: str) -> bool:
+    """Open a folder, load its cache and analyze new or changed photos.
+
+    Returns:
+        ``True`` if the folder was opened and scanned. On failure an error is
+        shown in the sidebar and ``False`` is returned, so the caller must not
+        rerun the script (that would erase the message).
+    """
     folder_text = folder_text.strip().strip('"')
     if not folder_text:
         st.sidebar.error("Enter the path of a folder that contains photos.")
-        return
+        return False
     try:
         pipe = Pipeline(Path(folder_text))
     except (NotADirectoryError, OSError) as exc:
         st.sidebar.error(f"Cannot open folder: {exc}")
-        return
+        return False
 
     st.session_state["pipeline"] = pipe
     st.session_state["thumbnails"] = ThumbnailCache(pipe.root)
     for key in ("preview", "page_number", "gallery_page"):
         st.session_state.pop(key, None)
     run_scan(pipe)
+    return True
 
 
 def run_scan(pipe: Pipeline) -> None:
@@ -182,21 +189,52 @@ def run_scan(pipe: Pipeline) -> None:
         flash(f"{len(result.errors)} file(s) could not be read (see tab 1).", "warning")
 
 
+def is_open_folder(pipe: Pipeline | None, folder_text: str) -> bool:
+    """Return ``True`` when ``folder_text`` names the folder already open."""
+    if pipe is None or not folder_text.strip():
+        return False
+    try:
+        return Path(folder_text.strip().strip('"')).expanduser().resolve() == pipe.root
+    except OSError:
+        return False
+
+
+def on_browse_folder() -> None:
+    """Callback: pick a folder in the native dialog and scan it."""
+    chosen = desktop.pick_folder_dialog(st.session_state.get("folder_text", ""))
+    if chosen:
+        st.session_state["folder_text"] = chosen
+        st.session_state["scan_after_browse"] = True
+
+
 def render_sidebar() -> None:
     """Folder selection and analysis thresholds."""
     st.sidebar.title("PhotoSeder")
     st.sidebar.caption("Local-first photo curation. Nothing leaves this computer.")
 
     pipe = pipeline()
+    if "folder_text" not in st.session_state:
+        st.session_state["folder_text"] = str(pipe.root) if pipe else ""
     folder_text = st.sidebar.text_input(
         "Photo folder",
-        value=str(pipe.root) if pipe else "",
+        key="folder_text",
         placeholder=r"e.g. C:\Photos\Trip or /home/me/Pictures/Trip",
-        help="Paste the full path. Subfolders are included; Unicode names work.",
+        help="Paste the full path or use Browse. Subfolders are included; Unicode names work.",
     )
-    label = "Rescan folder" if pipe and str(pipe.root) == folder_text.strip() else "Open & scan"
-    if st.sidebar.button(label, type="primary", width="stretch"):
-        open_folder(folder_text)
+    label = "Rescan folder" if is_open_folder(pipe, folder_text) else "Open & scan"
+    can_browse = desktop.tkinter_available()
+    columns = st.sidebar.columns(2) if can_browse else [st.sidebar.container()]
+    open_clicked = columns[0].button(label, type="primary", width="stretch")
+    if can_browse:
+        columns[1].button(
+            "Browse...",
+            width="stretch",
+            on_click=on_browse_folder,
+            help="Choose the photo folder in a dialog and scan it.",
+        )
+    if (open_clicked or st.session_state.pop("scan_after_browse", False)) and open_folder(
+        folder_text
+    ):
         st.rerun()
 
     pipe = pipeline()
@@ -740,7 +778,7 @@ def render_studio_tab(pipe: Pipeline) -> None:
     preview_col, edit_col = st.columns([3, 2])
     with preview_col:
         html = pipe.render_page_preview(page.page_id, export_options(), thumbnails().data_uri)
-        components.html(html, height=470, scrolling=False)
+        st.iframe(html, height=470)
 
     with edit_col:
         options = compatible_templates(len(page.photo_ids))

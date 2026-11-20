@@ -1,0 +1,73 @@
+name: Windows desktop build
+
+# Builds PhotoSeder.exe (PyInstaller, one-folder) on a Windows runner, smoke-tests it and
+# publishes the zip. Run it manually from the Actions tab, or push a tag such as v1.0.0 to
+# also attach the zip to a GitHub release.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "packaging/**"
+      - "photoseder/desktop.py"
+      - "photoseder/__main__.py"
+      - "photoseder/ui/app.py"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - ".github/workflows/windows-build.yml"
+
+permissions:
+  contents: write # attach the zip to a release on tags; unused otherwise
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # pywebview needs pythonnet on Windows, which lags behind the newest Python.
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e ".[desktop]"
+
+      - name: Create the icon
+        run: python packaging/make_icon.py
+
+      - name: Build PhotoSeder.exe
+        run: pyinstaller packaging/photoseder.spec --noconfirm --distpath dist --workpath build
+
+      - name: Smoke test the built program
+        shell: pwsh
+        run: |
+          # The program has no console, so it writes its report to a file and the
+          # exit code is read from the process object.
+          $report = Join-Path $env:RUNNER_TEMP "smoke-report.txt"
+          $process = Start-Process -FilePath "dist\PhotoSeder\PhotoSeder.exe" `
+            -ArgumentList "--smoke-test", "`"$report`"" -Wait -PassThru
+          if (Test-Path $report) { Get-Content $report } else { Write-Host "no report written" }
+          if ($process.ExitCode -ne 0) { throw "Smoke test failed (exit code $($process.ExitCode))" }
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist\PhotoSeder -DestinationPath PhotoSeder-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhotoSeder-windows
+          path: PhotoSeder-windows.zip
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$env:GITHUB_REF_NAME" PhotoSeder-windows.zip --generate-notes

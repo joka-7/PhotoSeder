@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
 heic = ["pillow-heif>=0.16"]
+desktop = ["pywebview>=5.0", "pyinstaller>=6.6"]
 
 [tool.setuptools.packages.find]
 include = ["photoseder*"]
