@@ -1,0 +1,37 @@
+name: Feature
+description: A new capability or an improvement
+labels: ["feature"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Goal (one line)
+      placeholder: "As a user I can ..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / why
+      description: What problem does this solve? Keep it short.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: The checklist that defines "done".
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints (optional)
+      description: Stack or library choices, files not to touch, performance or UX limits.
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope (optional)
+      description: What should NOT be done in this issue.
